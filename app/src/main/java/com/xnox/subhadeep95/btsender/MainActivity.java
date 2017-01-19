@@ -40,11 +40,11 @@ public class MainActivity extends ActionBarActivity {
 
     BluetoothAdapter bluetoothAdapter;
 
-    ArrayList<BluetoothDevice> pairedDeviceArrayList;
+    ArrayList<String> pairedDeviceArrayList;
 
     TextView textInfo, textStatus;
     ListView listViewPairedDevice;
-    ArrayAdapter<BluetoothDevice> pairedDeviceAdapter;
+    ArrayAdapter<String> pairedDeviceAdapter;
     private UUID myUUID;
 
     LinearLayout inputPane;
@@ -67,6 +67,7 @@ public class MainActivity extends ActionBarActivity {
         textInfo = (TextView) findViewById(R.id.info);
         textStatus = (TextView) findViewById(R.id.status);
         listViewPairedDevice = (ListView) findViewById(R.id.pairedlist);
+        img = (ImageView) findViewById(R.id.light);
 
         inputPane = (LinearLayout) findViewById(R.id.inputpane);
         inputField = (EditText) findViewById(R.id.input);
@@ -76,8 +77,9 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onClick(View v) {
                 if (myThreadConnected != null) {
-                    byte[] bytesToSend = inputField.getText().toString().getBytes();
-                    myThreadConnected.write(bytesToSend);
+                    //byte[] bytesToSend = inputField.getText().toString().getBytes();
+                    String info = "hey";
+                    myThreadConnected.write(info);
                 }
             }
         });
@@ -130,15 +132,15 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void setup() {
-        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
+        final Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
         if (pairedDevices.size() > 0) {
-            pairedDeviceArrayList = new ArrayList<BluetoothDevice>();
+            pairedDeviceArrayList = new ArrayList<String>();
 
             for (BluetoothDevice device : pairedDevices) {
-                pairedDeviceArrayList.add(device);
+                pairedDeviceArrayList.add(device.getName());
             }
 
-            pairedDeviceAdapter = new ArrayAdapter<BluetoothDevice>(this,
+            pairedDeviceAdapter = new ArrayAdapter<>(this,
                     android.R.layout.simple_list_item_1, pairedDeviceArrayList);
             listViewPairedDevice.setAdapter(pairedDeviceAdapter);
 
@@ -147,36 +149,38 @@ public class MainActivity extends ActionBarActivity {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view,
                                         int position, long id) {
-                    BluetoothDevice device =
-                            (BluetoothDevice) parent.getItemAtPosition(position);
-                    Toast.makeText(MainActivity.this,
-                            "Name: " + device.getName() + "\n"
-                                    + "Address: " + device.getAddress() + "\n"
-                                    + "BondState: " + device.getBondState() + "\n"
-                                    + "BluetoothClass: " + device.getBluetoothClass() + "\n"
-                                    + "Class: " + device.getClass(),
-                            Toast.LENGTH_LONG).show();
+                    String deviceName = (String)parent.getItemAtPosition(position);
+                    Toast.makeText(MainActivity.this, "Name: " + deviceName, Toast.LENGTH_LONG).show();
 
-                    textStatus.setText("start ThreadConnectBTdevice");
-                    myThreadConnectBTdevice = new ThreadConnectBTdevice(device);
-                    myThreadConnectBTdevice.start();
+                    for (BluetoothDevice device : pairedDevices) {
+                        if(device.getName().equals(deviceName))
+                        {
+                            textStatus.setText("start ThreadConnectBTdevice");
+                            myThreadConnectBTdevice = new ThreadConnectBTdevice(device);
+                            myThreadConnectBTdevice.start();
+                        }
+                    }
                 }
             });
         }
     }
 
     public void Tapit(View view){
-    img = (ImageView) findViewById(R.id.light);
+
         if(status == 0)
         {
+            myThreadConnected.write("LIGHT ON");
             status = 1;
+            img.setImageResource(R.drawable.light_on);
         }
-        else if(status == 1)
-        {
+        else if(status == 1) {
+            myThreadConnected.write("LIGHT OFF");
             status = 0;
+            img.setImageResource(R.drawable.light_off);
         }
-      img.setImageResource(R.drawable.common_full_open_on_phone);
+
     }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -375,9 +379,9 @@ public class MainActivity extends ActionBarActivity {
             }
         }
 
-        public void write(byte[] buffer) {
+        public void write(String buffer) {
             try {
-                connectedOutputStream.write(buffer);
+                connectedOutputStream.write(buffer.getBytes());
 
             } catch (IOException e) {
                 // TODO Auto-generated catch block
